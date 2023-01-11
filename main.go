@@ -18,6 +18,6 @@ func main() {
 	} else if args[1] == "--help" {
 		exec.Help()
 	} else {
-		exec.Execute(args[0])
+		exec.Execute(args[1])
 	}
 }
