@@ -1,0 +1,8 @@
+{
+  "$schema": "./exec.jsonschema.json",
+  "scripts": {},
+  "extends": [],
+  "scopes": {
+    "@npm": {}
+  }
+}

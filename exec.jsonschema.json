@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "exec.json",
+  "description": "exec scripts definition file",
+  "fileMatch": ["exec.json"],
+  "url": "https://json.schemastore.org/exec.json",
+  "type": "object",
+  "properties": {
+    "scripts": {
+      "description": "The definition of your custom scripts",
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "minProperties": 1
+    },
+    "extends": {
+      "description": "Paths to other exec.json files for extending the current definitions",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "scopes": {
+      "description": "Override the naming of scopes",
+      "type": "object",
+      "additionalProperties": {
+        "properties": {
+          "ignore": {
+            "description": "Whether to ignore this scope or not",
+            "type": "boolean"
+          },
+          "alias": {
+            "description": "An alias for the specified scope",
+            "type": "string"
+          }
+        }
+      },
+      "minProperties": 1
+    }
+  }
+}
