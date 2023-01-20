@@ -5,6 +5,9 @@ import (
 	"errors"
 	"os"
 	"path"
+
+	"github.com/fabiankachlock/exec/internal/loader"
+	"github.com/fabiankachlock/exec/internal/loader/npm"
 )
 
 type ScopeOptions struct {
@@ -22,6 +25,10 @@ type Config struct {
 type Script struct {
 	Command string
 	Wd      string
+}
+
+var Loaders []loader.Loader = []loader.Loader{
+	npm.NewLoader(),
 }
 
 func FindConfig(cwd string) (Config, error) {
@@ -52,16 +59,28 @@ func readConfig(filePath string) (Config, error) {
 	return config, nil
 }
 
-func (c Config) Merge(with Config) Config {
-	return Config{}
-}
-
 func (c Config) FindScript(name string) Script {
 	return c.findScriptRecursive(name)
 }
 
 func (c Config) listScopedCommands() map[string]string {
-	return c.Scripts
+	scripts := map[string]string{}
+
+	for key, script := range c.Scripts {
+		scripts[key] = script
+	}
+
+	for _, loader := range Loaders {
+		prefix := loader.GetScope()
+		for key, script := range loader.LoadConfig(c.Location) {
+			scopedKey := prefix + ":" + key
+			if _, found := scripts[scopedKey]; !found {
+				scripts[scopedKey] = script
+			}
+		}
+	}
+
+	return scripts
 }
 
 func (c Config) findScriptRecursive(name string) Script {
