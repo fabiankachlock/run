@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
+	"time"
 )
 
 //go:embed template/*
@@ -49,24 +49,21 @@ func Execute(name string) {
 		return
 	}
 
-	script.Command = strings.ReplaceAll(script.Command, "'", "")
-	script.Command = strings.ReplaceAll(script.Command, "\"", "")
-	commandParts := strings.Split(script.Command, " ")
-	if len(commandParts) == 0 {
-		fmt.Println("exec: an error happened: invalid command '" + script.Command + "'")
-	}
-
-	args := []string{""}
-	args = append(args, commandParts[1:]...)
+	args := []string{"-c", script.Command}
 	args = append(args, os.Args[2:]...)
 
-	cmd := exec.Command(commandParts[0])
+	fmt.Printf("$exec: executing: \"%s\" with args: %v\n", script.Command, os.Args[2:])
+	start := time.Now()
+
+	cmd := exec.Command("sh", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = script.Wd
-	cmd.Args = args
 
 	err = cmd.Run()
 	handleError(err, "cant execute command")
+
+	elapsed := time.Since(start)
+	fmt.Printf("$exec: done in %s\n", elapsed)
 }
