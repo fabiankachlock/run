@@ -3,6 +3,7 @@ package exec
 import (
 	"embed"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -40,12 +41,12 @@ func Execute(name string) {
 	cwd, err := os.Getwd()
 	handleError(err, "cant get cwd")
 
-	config, err := FindConfig(cwd)
 	handleError(err, "cant read config")
 
-	script := config.FindScript(name)
-	if script.Command == "" {
-		fmt.Println("exec: an error happened: cant find a declaration for a script named '" + name + "'")
+	script, err := FindScript(cwd, name)
+	if script == nil || err != nil {
+		fmt.Println("$exec: an error happened: cant find a declaration for a script named '" + name + "'")
+		log.Printf("[error]: loading script %s: %s", name, err)
 		return
 	}
 

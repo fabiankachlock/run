@@ -2,7 +2,7 @@ package exec
 
 import (
 	"encoding/json"
-	"errors"
+	"log"
 	"os"
 	"path"
 
@@ -31,18 +31,6 @@ var Loaders []loader.Loader = []loader.Loader{
 	npm.NewLoader(),
 }
 
-func FindConfig(cwd string) (Config, error) {
-	dir := cwd
-	for {
-		filePath := path.Join(dir, CONFIG_FILE)
-		if _, err := os.Stat(filePath); err == nil {
-			return readConfig(filePath)
-		} else if errors.Is(err, os.ErrNotExist) {
-			dir = path.Join(dir, "..")
-		}
-	}
-}
-
 func readConfig(filePath string) (Config, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -59,38 +47,96 @@ func readConfig(filePath string) (Config, error) {
 	return config, nil
 }
 
-func (c Config) FindScript(name string) Script {
-	return c.findScriptRecursive(name)
+func FindScript(cwd string, targetScript string) (*Script, error) {
+	var loadedConfigs *map[string]bool = &map[string]bool{}
+
+	dir := cwd
+	for {
+		var script *Script
+		filePath := path.Join(dir, CONFIG_FILE)
+		log.Printf("[info] try reading config %s", filePath)
+
+		// check if config file exists in folder
+		_, err := os.Stat(filePath)
+		// if exists search that config
+		if err == nil {
+			script, err = findScriptInConfig(filePath, targetScript, loadedConfigs)
+		} else {
+			log.Printf("[error] while reading config %s: %s", filePath, err)
+			err = nil
+		}
+
+		// if found a scrip
+		if err == nil && script != nil {
+			return script, nil
+		} else if err != nil {
+			log.Printf("[error] while searching script in config %s: %s", filePath, err)
+		}
+
+		// try go up one folder
+		newDir := path.Join(dir, "..")
+		// dir doesn't change when root (path.Join("/", "..") -> "/")
+		if newDir == dir {
+			log.Printf("[info] reached root - stopping search")
+			return nil, ErrCantFindScript
+		} else {
+			dir = newDir
+		}
+	}
 }
 
-func (c Config) listScopedCommands() map[string]string {
-	scripts := map[string]string{}
+func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map[string]bool) (*Script, error) {
+	log.Printf("[info] reading config %s", filePath)
+	dir := path.Dir(filePath)
+	config, err := readConfig(filePath)
+	if err != nil {
+		return nil, err
+	}
+	(*alreadyLoaded)[filePath] = true
 
-	for key, script := range c.Scripts {
-		scripts[key] = script
+	script, ok := config.Scripts[targetScript]
+	if ok {
+		return &Script{
+			Command: script,
+			Wd:      config.Location,
+		}, nil
+	} else {
+		log.Printf("[info] [%s] config script don't include target script", filePath)
 	}
 
-	for _, loader := range Loaders {
-		prefix := loader.GetScope()
-		for key, script := range loader.LoadConfig(c.Location) {
-			scopedKey := prefix + ":" + key
-			if _, found := scripts[scopedKey]; !found {
-				scripts[scopedKey] = script
+	log.Printf("[info] [%s] loading vendor scripts", filePath)
+	// search all vendors
+	for _, vendor := range Loaders {
+		log.Printf("[info] [%s] [%s] loading vendor script", filePath, vendor.GetScope())
+		for alias, script := range vendor.LoadConfig(dir) {
+			// targetScript should match {vendorScope}:{vendorScript} (scoped version of vendor script)
+			if vendor.GetScope()+":"+alias == targetScript {
+				return &Script{
+					Command: script,
+					Wd:      config.Location,
+				}, nil
 			}
+		}
+		log.Printf("[info] [%s] [%s] vendor script don't include target script", filePath, vendor.GetScope())
+	}
+
+	log.Printf("[info] [%s] loading reference scripts", filePath)
+	// search all reference
+	for _, ref := range config.Extends {
+		// only load config if not already loaded (against cyclic refs)
+		referencePath := path.Join(dir, ref)
+		if _, ok := (*alreadyLoaded)[referencePath]; !ok {
+			log.Printf("[info] [%s] [%s] loading reference at %s", filePath, ref, referencePath)
+			foundScript, err := findScriptInConfig(referencePath, targetScript, alreadyLoaded)
+			if foundScript != nil && err == nil {
+				return foundScript, nil
+			} else if err != nil {
+				log.Printf("[error] [%s] [%s] while loading reference: %s", filePath, ref, err)
+			}
+		} else {
+			log.Printf("[info] [%s] [%s] not loading - already loaded", filePath, ref)
 		}
 	}
 
-	return scripts
-}
-
-func (c Config) findScriptRecursive(name string) Script {
-	scripts := c.listScopedCommands()
-	command, ok := scripts[name]
-	if !ok {
-		return Script{}
-	}
-	return Script{
-		Command: command,
-		Wd:      c.Location,
-	}
+	return nil, ErrCantFindScript
 }
