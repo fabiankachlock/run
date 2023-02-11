@@ -51,7 +51,7 @@ func Execute(name string) {
 	}
 
 	args := []string{"-c", script.Command}
-	args = append(args, os.Args[2:]...)
+	args = append(args, GetCleanArgs(os.Args[2:])...)
 
 	fmt.Printf("$exec: executing: \"%s\" with args: %v\n", script.Command, os.Args[2:])
 	start := time.Now()
