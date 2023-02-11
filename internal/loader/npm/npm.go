@@ -33,5 +33,10 @@ func (n *npmLoader) LoadConfig(dir string) map[string]string {
 	if err != nil {
 		return map[string]string{}
 	}
-	return parsedPackageJson.Scripts
+
+	remappedScripts := map[string]string{}
+	for alias := range parsedPackageJson.Scripts {
+		remappedScripts[alias] = "npm run " + alias
+	}
+	return remappedScripts
 }
