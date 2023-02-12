@@ -8,6 +8,7 @@ import (
 
 	"github.com/fabiankachlock/exec/internal/loader"
 	"github.com/fabiankachlock/exec/internal/loader/npm"
+	"github.com/fabiankachlock/exec/internal/loader/yarn"
 )
 
 type ScopeOptions struct {
@@ -29,6 +30,7 @@ type Script struct {
 
 var Loaders []loader.Loader = []loader.Loader{
 	npm.NewLoader(),
+	yarn.NewLoader(),
 }
 
 func readConfig(filePath string) (Config, error) {
