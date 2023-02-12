@@ -23,18 +23,7 @@
     "scopes": {
       "description": "Override the naming of scopes",
       "type": "object",
-      "additionalProperties": {
-        "properties": {
-          "ignore": {
-            "description": "Whether to ignore this scope or not",
-            "type": "boolean"
-          },
-          "alias": {
-            "description": "An alias for the specified scope",
-            "type": "string"
-          }
-        }
-      },
+      "additionalProperties": true,
       "minProperties": 1
     }
   }

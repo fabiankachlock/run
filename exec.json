@@ -1,4 +1,5 @@
 {
+  "$schema": "./exec.jsonschema.json",
   "scripts": {
     "build": "go build",
     "test": "ls -nal"
