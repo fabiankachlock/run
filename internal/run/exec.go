@@ -32,16 +32,16 @@ func Help() {
 	fmt.Println("")
 	fmt.Println("run - usage:")
 	fmt.Println("")
-	fmt.Println("run <script name> - runutes a script defined in run.json or referenced config files")
-	fmt.Println("run --init        - creates a new config file")
-	fmt.Println("run --help        - prints command usage")
+	fmt.Println("run <script> [-v|--debug] - executes a script defined in run.json or referenced config files")
+	fmt.Println("              -v|--debug  - print debug information")
+	fmt.Println("run --init                - creates a new config file")
+	fmt.Println("run -h|--help             - prints command usage")
 }
 
 func Execute(name string) {
+	log.Printf("[info] searching script '%s'", name)
 	cwd, err := os.Getwd()
 	handleError(err, "cant get cwd")
-
-	handleError(err, "cant read config")
 
 	script, err := FindScript(cwd, name)
 	if script == nil || err != nil {
@@ -53,7 +53,7 @@ func Execute(name string) {
 	args := []string{"-c", script.Command}
 	args = append(args, GetCleanArgs(os.Args[2:])...)
 
-	fmt.Printf("$run: runuting: \"%s\" with args: %v\n", script.Command, os.Args[2:])
+	fmt.Printf("$run: executing: \"%s\" with args: %v\n", script.Command, os.Args[2:])
 	start := time.Now()
 
 	cmd := exec.Command("sh", args...)

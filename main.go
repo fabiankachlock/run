@@ -25,11 +25,12 @@ func main() {
 		log.SetOutput(&voidWriter{})
 	}
 
-	if args[1] == "--init" {
+	cleanArgs := run.GetCleanArgs(args)
+	if cleanArgs[1] == "--init" {
 		run.Init()
-	} else if args[1] == "--help" {
+	} else if cleanArgs[1] == "--help" || cleanArgs[1] == "-h" {
 		run.Help()
 	} else {
-		run.Execute(args[1])
+		run.Execute(cleanArgs[1])
 	}
 }
