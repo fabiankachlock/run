@@ -11,16 +11,11 @@ import (
 	"github.com/fabiankachlock/run/internal/loader/yarn"
 )
 
-type ScopeOptions struct {
-	Alias  string `json:"alias"`
-	Ignore bool   `json:"ignore"`
-}
-
 type Config struct {
-	Scripts  map[string]string       `json:"scripts"`
-	Extends  []string                `json:"extends"`
-	Scopes   map[string]ScopeOptions `json:"scopes"`
-	Location string                  `json:"-"`
+	Scripts  map[string]string      `json:"scripts"`
+	Extends  []string               `json:"extends"`
+	Scopes   map[string]interface{} `json:"scopes"`
+	Location string                 `json:"-"`
 }
 
 type Script struct {
@@ -96,6 +91,7 @@ func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map
 	}
 	(*alreadyLoaded)[filePath] = true
 
+	config = computeConfigScopes(config, filePath)
 	script, ok := config.Scripts[targetScript]
 	if ok {
 		return &Script{
@@ -141,4 +137,31 @@ func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map
 	}
 
 	return nil, ErrCantFindScript
+}
+
+func computeConfigScopes(config Config, filePath string) Config {
+	log.Printf("[info] [%s] computing scopes", filePath)
+
+	if scope, ok := config.Scopes[SELF_SCOPE]; ok {
+		var alias string
+		switch v := scope.(type) {
+		case bool:
+			if v {
+				alias = filepath.Base(config.Location)
+			} else {
+				return config
+			}
+		case string:
+			alias = v
+		default:
+			return config
+		}
+		log.Printf("[info] [%s] rescoped self as '%s'", filePath, alias)
+		for key, script := range config.Scripts {
+			delete(config.Scripts, key)
+			config.Scripts[alias+":"+key] = script
+		}
+		log.Println(config)
+	}
+	return config
 }
