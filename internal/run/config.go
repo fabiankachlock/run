@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/fabiankachlock/run/internal/loader"
 	"github.com/fabiankachlock/run/internal/loader/npm"
@@ -45,7 +45,7 @@ func readConfig(filePath string) (Config, error) {
 		return Config{}, err
 	}
 
-	config.Location = path.Dir(filePath)
+	config.Location = filepath.Dir(filePath)
 	return config, nil
 }
 
@@ -55,7 +55,7 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 	dir := cwd
 	for {
 		var script *Script
-		filePath := path.Join(dir, CONFIG_FILE)
+		filePath := filepath.Join(dir, CONFIG_FILE)
 		log.Printf("[info] try reading config %s", filePath)
 
 		// check if config file exists in folder
@@ -76,8 +76,8 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 		}
 
 		// try go up one folder
-		newDir := path.Join(dir, "..")
-		// dir doesn't change when root (path.Join("/", "..") -> "/")
+		newDir := filepath.Dir(dir)
+		// dir doesn't change when root
 		if newDir == dir {
 			log.Printf("[info] reached root - stopping search")
 			return nil, ErrCantFindScript
@@ -89,7 +89,7 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 
 func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map[string]bool) (*Script, error) {
 	log.Printf("[info] reading config %s", filePath)
-	dir := path.Dir(filePath)
+	dir := filepath.Dir(filePath)
 	config, err := readConfig(filePath)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map
 	// search all reference
 	for _, ref := range config.Extends {
 		// only load config if not already loaded (against cyclic refs)
-		referencePath := path.Join(dir, ref)
+		referencePath := filepath.Join(dir, ref)
 		if _, ok := (*alreadyLoaded)[referencePath]; !ok {
 			log.Printf("[info] [%s] [%s] loading reference at %s", filePath, ref, referencePath)
 			foundScript, err := findScriptInConfig(referencePath, targetScript, alreadyLoaded)

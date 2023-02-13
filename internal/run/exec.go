@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -17,7 +17,7 @@ func Init() {
 	cwd, err := os.Getwd()
 	handleError(err, "cant get cwd")
 
-	path := path.Join(cwd, CONFIG_FILE)
+	path := filepath.Join(cwd, CONFIG_FILE)
 	file, err := os.Create(path)
 	handleError(err, "cant create config file")
 

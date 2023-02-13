@@ -3,7 +3,7 @@ package npm
 import (
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/fabiankachlock/run/internal/loader"
 )
@@ -23,7 +23,7 @@ func (n *npmLoader) GetScope() string {
 }
 
 func (n *npmLoader) LoadConfig(dir string) map[string]string {
-	file, err := os.ReadFile(path.Join(dir, "package.json"))
+	file, err := os.ReadFile(filepath.Join(dir, "package.json"))
 	if err != nil {
 		return map[string]string{}
 	}
