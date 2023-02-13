@@ -18,10 +18,6 @@ func NewLoader() loader.Loader {
 	return &npmLoader{}
 }
 
-func (n *npmLoader) GetScope() string {
-	return "npm"
-}
-
 func (n *npmLoader) LoadConfig(dir string) map[string]string {
 	file, err := os.ReadFile(filepath.Join(dir, "package.json"))
 	if err != nil {

@@ -23,9 +23,9 @@ type Script struct {
 	Wd      string
 }
 
-var Loaders []loader.Loader = []loader.Loader{
-	npm.NewLoader(),
-	yarn.NewLoader(),
+var AllLoaders map[string]loader.Loader = map[string]loader.Loader{
+	"npm":  npm.NewLoader(),
+	"yarn": yarn.NewLoader(),
 }
 
 func readConfig(filePath string) (Config, error) {
@@ -104,18 +104,18 @@ func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map
 
 	log.Printf("[info] [%s] loading vendor scripts", filePath)
 	// search all vendors
-	for _, vendor := range Loaders {
-		log.Printf("[info] [%s] [%s] loading vendor script", filePath, vendor.GetScope())
+	for scope, vendor := range getEnabledLoaders(config) {
+		log.Printf("[info] [%s] [%s] loading vendor script", filePath, scope)
 		for alias, script := range vendor.LoadConfig(dir) {
 			// targetScript should match {vendorScope}:{vendorScript} (scoped version of vendor script)
-			if vendor.GetScope()+":"+alias == targetScript {
+			if scope+":"+alias == targetScript {
 				return &Script{
 					Command: script,
 					Wd:      config.Location,
 				}, nil
 			}
 		}
-		log.Printf("[info] [%s] [%s] vendor script don't include target script", filePath, vendor.GetScope())
+		log.Printf("[info] [%s] [%s] vendor script don't include target script", filePath, scope)
 	}
 
 	log.Printf("[info] [%s] loading reference scripts", filePath)
@@ -147,12 +147,12 @@ func computeConfigScopes(config Config, filePath string) Config {
 		switch v := scope.(type) {
 		case bool:
 			if v {
-				alias = filepath.Base(config.Location)
+				alias = filepath.Base(config.Location) // true -> use default alias (dirname)
 			} else {
-				return config
+				return config // false -> don't alias self
 			}
 		case string:
-			alias = v
+			alias = v // string -> use provided alias
 		default:
 			return config
 		}
@@ -164,4 +164,23 @@ func computeConfigScopes(config Config, filePath string) Config {
 		log.Println(config)
 	}
 	return config
+}
+
+func getEnabledLoaders(config Config) map[string]loader.Loader {
+	loaders := map[string]loader.Loader{}
+	for key, scope := range config.Scopes {
+		loader, ok := AllLoaders[key]
+		if !ok {
+			continue // skip unknown loaders
+		}
+		switch v := scope.(type) {
+		case bool:
+			if v {
+				loaders[key] = loader
+			}
+		case string:
+			loaders[v] = loader
+		}
+	}
+	return loaders
 }

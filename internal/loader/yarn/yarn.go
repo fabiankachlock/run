@@ -18,10 +18,6 @@ func NewLoader() loader.Loader {
 	return &yarnLoader{}
 }
 
-func (n *yarnLoader) GetScope() string {
-	return "yarn"
-}
-
 func (n *yarnLoader) LoadConfig(dir string) map[string]string {
 	file, err := os.ReadFile(path.Join(dir, "package.json"))
 	if err != nil {
