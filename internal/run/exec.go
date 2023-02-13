@@ -1,4 +1,4 @@
-package exec
+package run
 
 import (
 	"embed"
@@ -30,11 +30,11 @@ func Init() {
 
 func Help() {
 	fmt.Println("")
-	fmt.Println("exec - usage:")
+	fmt.Println("run - usage:")
 	fmt.Println("")
-	fmt.Println("exec <script name> - executes a script defined in exec.json or referenced config files")
-	fmt.Println("exec --init        - creates a new config file")
-	fmt.Println("exec --help        - prints command usage")
+	fmt.Println("run <script name> - runutes a script defined in run.json or referenced config files")
+	fmt.Println("run --init        - creates a new config file")
+	fmt.Println("run --help        - prints command usage")
 }
 
 func Execute(name string) {
@@ -45,7 +45,7 @@ func Execute(name string) {
 
 	script, err := FindScript(cwd, name)
 	if script == nil || err != nil {
-		fmt.Println("$exec: an error happened: cant find a declaration for a script named '" + name + "'")
+		fmt.Println("$run: an error happened: cant find a declaration for a script named '" + name + "'")
 		log.Printf("[error]: loading script %s: %s", name, err)
 		return
 	}
@@ -53,7 +53,7 @@ func Execute(name string) {
 	args := []string{"-c", script.Command}
 	args = append(args, GetCleanArgs(os.Args[2:])...)
 
-	fmt.Printf("$exec: executing: \"%s\" with args: %v\n", script.Command, os.Args[2:])
+	fmt.Printf("$run: runuting: \"%s\" with args: %v\n", script.Command, os.Args[2:])
 	start := time.Now()
 
 	cmd := exec.Command("sh", args...)
@@ -63,8 +63,8 @@ func Execute(name string) {
 	cmd.Dir = script.Wd
 
 	err = cmd.Run()
-	handleError(err, "cant execute command")
+	handleError(err, "cant runute command")
 
 	elapsed := time.Since(start)
-	fmt.Printf("$exec: done in %s\n", elapsed)
+	fmt.Printf("$run: done in %s\n", elapsed)
 }

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/fabiankachlock/exec/internal/exec"
+	"github.com/fabiankachlock/run/internal/run"
 )
 
 type voidWriter struct{}
@@ -16,20 +16,20 @@ func (v *voidWriter) Write(bytes []byte) (n int, err error) {
 func main() {
 	args := os.Args
 	if len(args) <= 1 {
-		exec.Help()
+		run.Help()
 		return
 	}
 
 	log.SetFlags(log.Ltime)
-	if !exec.HasDebugFlag(os.Args) {
+	if !run.HasDebugFlag(os.Args) {
 		log.SetOutput(&voidWriter{})
 	}
 
 	if args[1] == "--init" {
-		exec.Init()
+		run.Init()
 	} else if args[1] == "--help" {
-		exec.Help()
+		run.Help()
 	} else {
-		exec.Execute(args[1])
+		run.Execute(args[1])
 	}
 }

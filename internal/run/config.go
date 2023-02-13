@@ -1,4 +1,4 @@
-package exec
+package run
 
 import (
 	"encoding/json"
@@ -6,9 +6,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/fabiankachlock/exec/internal/loader"
-	"github.com/fabiankachlock/exec/internal/loader/npm"
-	"github.com/fabiankachlock/exec/internal/loader/yarn"
+	"github.com/fabiankachlock/run/internal/loader"
+	"github.com/fabiankachlock/run/internal/loader/npm"
+	"github.com/fabiankachlock/run/internal/loader/yarn"
 )
 
 type ScopeOptions struct {

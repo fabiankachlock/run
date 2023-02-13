@@ -1,4 +1,4 @@
-package exec
+package run
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ var (
 
 func handleError(err error, msg string) {
 	if err != nil {
-		fmt.Printf("$exec: an error happened:\n-> %s\n-> %s\n", msg, err)
+		fmt.Printf("$run: an error happened:\n-> %s\n-> %s\n", msg, err)
 		panic(err)
 	}
 }

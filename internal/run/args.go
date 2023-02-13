@@ -1,4 +1,4 @@
-package exec
+package run
 
 func GetCleanArgs(args []string) []string {
 	newArgs := []string{}

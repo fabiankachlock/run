@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "name": "exec.json",
-  "description": "exec scripts definition file",
-  "fileMatch": ["exec.json"],
-  "url": "https://json.schemastore.org/exec.json",
+  "name": "run.json",
+  "description": "run scripts definition file",
+  "fileMatch": ["run.json"],
+  "url": "https://json.schemastore.org/run.json",
   "type": "object",
   "properties": {
     "scripts": {
@@ -13,7 +13,7 @@
       "minProperties": 1
     },
     "extends": {
-      "description": "Paths to other exec.json files for extending the current definitions",
+      "description": "Paths to other run.json files for extending the current definitions",
       "type": "array",
       "items": {
         "type": "string"

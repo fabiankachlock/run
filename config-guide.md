@@ -6,7 +6,7 @@ General structure:
     "scripts": {
         "myScript": "echo 'Hello World'"
     },
-    "extends": ["./nested/folder/exec.json"],
+    "extends": ["./nested/folder/run.json"],
     "scopes": {
         "self": "frontend",
         "npm": true,
@@ -23,19 +23,19 @@ Syntax: ` [<alias>]: <script>`
 
 ## `extends`
 
-Reference other `exec.json` config files to search when calling a script.
+Reference other `run.json` config files to search when calling a script.
 
-> Note: since exec searches the tree upwards for config files with a matching definition it's enough when only the "root" config file references all other configs
+> Note: since run searches the tree upwards for config files with a matching definition it's enough when only the "root" config file references all other configs
 > Example: 
 > ```
 > | -- project
->      | -- exec.json // (1) <- root config file
+>      | -- run.json // (1) <- root config file
 >      | -- folderA
->           | -- exec.json // (2)
+>           | -- run.json // (2)
 >      | -- folderB
->           | -- exec.json // (3)
+>           | -- run.json // (3)
 > ``` 
-> Only the root exec.json (1) needs to reference (2) & (3) to make all scripts available in the entire project tree 
+> Only the root run.json (1) needs to reference (2) & (3) to make all scripts available in the entire project tree 
 
 ## `scopes`
 
@@ -51,7 +51,7 @@ Using another name instead of the directory name can be done by setting `"$self"
 
 ### Enabling vendor loaders
 
-exec can be integrated into existing developer configurations using vendor loaders. For example by enabling the `npm` loader all scripts defined in the package.json in teh current directory are available with the `npm` prefix.
+run can be integrated into existing developer configurations using vendor loaders. For example by enabling the `npm` loader all scripts defined in the package.json in teh current directory are available with the `npm` prefix.
 
 Supported loaders:
 - npm

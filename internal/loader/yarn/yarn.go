@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/fabiankachlock/exec/internal/loader"
+	"github.com/fabiankachlock/run/internal/loader"
 )
 
 type yarnLoader struct{}
