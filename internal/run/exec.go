@@ -53,7 +53,7 @@ func Execute(name string) {
 	args := []string{"-c", script.Command}
 	args = append(args, GetCleanArgs(os.Args[2:])...)
 
-	fmt.Printf("$run: executing: \"%s\" with args: %v\n", script.Command, os.Args[2:])
+	fmt.Printf("$run: executing: \"%s\" with args: %v\n", script.Command, GetCleanArgs(os.Args[1:])[1:])
 	start := time.Now()
 
 	cmd := exec.Command("sh", args...)
@@ -63,7 +63,7 @@ func Execute(name string) {
 	cmd.Dir = script.Wd
 
 	err = cmd.Run()
-	handleError(err, "cant runute command")
+	handleError(err, "cant execute command")
 
 	elapsed := time.Since(start)
 	fmt.Printf("$run: done in %s\n", elapsed)
