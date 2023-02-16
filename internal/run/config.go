@@ -184,3 +184,67 @@ func getEnabledLoaders(config Config) map[string]loader.Loader {
 	}
 	return loaders
 }
+
+func ListScripts(cwd string) []string {
+	var loadedConfigs *map[string]bool = &map[string]bool{}
+	var allScripts []string = []string{}
+
+	dir := cwd
+	for {
+		filePath := filepath.Join(dir, CONFIG_FILE)
+		log.Printf("[info] try reading config %s", filePath)
+
+		// check if config file exists in folder
+		_, err := os.Stat(filePath)
+		// if exists search that config
+		if err == nil {
+			allScripts = append(allScripts, listScriptsOfConfig(filePath, loadedConfigs)...)
+		} else {
+			log.Printf("[error] while reading config %s: %s", filePath, err)
+			err = nil
+		}
+
+		// try go up one folder
+		newDir := filepath.Dir(dir)
+		// dir doesn't change when root
+		if newDir == dir {
+			log.Printf("[info] reached root - stopping search")
+			return allScripts
+		} else {
+			dir = newDir
+		}
+	}
+}
+
+func listScriptsOfConfig(filePath string, alreadyLoaded *map[string]bool) []string {
+	log.Printf("[info] reading config %s", filePath)
+	dir := filepath.Dir(filePath)
+	config, err := readConfig(filePath)
+	if err != nil {
+		return []string{}
+	}
+	(*alreadyLoaded)[filePath] = true
+
+	scriptsOfConfig := []string{}
+	config = computeConfigScopes(config, filePath)
+	for script := range config.Scripts {
+		scriptsOfConfig = append(scriptsOfConfig, script)
+	}
+
+	for scope, vendor := range getEnabledLoaders(config) {
+		log.Printf("[info] [%s] [%s] loading vendor script", filePath, scope)
+		for alias := range vendor.LoadConfig(dir) {
+			scriptsOfConfig = append(scriptsOfConfig, scope+":"+alias)
+		}
+	}
+
+	for _, ref := range config.Extends {
+		referencePath := filepath.Join(dir, ref)
+		if _, ok := (*alreadyLoaded)[referencePath]; !ok {
+			log.Printf("[info] [%s] [%s] loading reference at %s", filePath, ref, referencePath)
+			scriptsOfConfig = append(scriptsOfConfig, listScriptsOfConfig(referencePath, alreadyLoaded)...)
+		}
+	}
+
+	return scriptsOfConfig
+}

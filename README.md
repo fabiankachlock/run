@@ -31,7 +31,11 @@ go install github.com/fabiankachlock/run
 > For further configuration please see [config-guide.md](https://github.com/fabiankachlock/run/blob/main/config-guide.md)
 
 3) use it! `run build`
-4) integrate existing script providers
+4) setup auto completion
+
+Put  `source <(run --completion)` into your `.bashrc`, `.zshrc` or according
+
+1) integrate existing script providers
 
 > *run.json*
 > ```json
@@ -55,6 +59,14 @@ go install github.com/fabiankachlock/run
 
 
 ## Concepts
+
+### auto completion
+
+To setup auto completion in your shell, you need to put the following line into your shell configuration file (e.g. `.bashrc` or `.zshrc`)
+
+```bash
+source <(run --completion)
+```
 
 ### writing scripts
 

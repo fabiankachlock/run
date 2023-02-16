@@ -30,6 +30,10 @@ func main() {
 		run.Init()
 	} else if cleanArgs[1] == "--help" || cleanArgs[1] == "-h" {
 		run.Help()
+	} else if cleanArgs[1] == "--completion" {
+		run.GenerateCompletionScript()
+	} else if cleanArgs[1] == "--generate-completion-list" {
+		run.GenerateCompletionSuggestions()
 	} else {
 		run.Execute(cleanArgs[1])
 	}
