@@ -13,6 +13,7 @@ func (v *voidWriter) Write(bytes []byte) (n int, err error) {
 	return len(bytes), nil
 }
 
+// main TODO: docs
 func main() {
 	args := os.Args
 	if len(args) <= 1 {
