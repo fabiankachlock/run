@@ -96,8 +96,8 @@ Currently only the following are supported:
 ## Roadmap
 
 - [x] shell auto completion support
-- [ ] provide prebuilt binaries in releases
 - [x] support `root` option in config
 - [x] provide `--list` option
 - [x] support global config
+- [ ] provide prebuilt binaries in releases
 - [ ] support more vendors

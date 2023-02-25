@@ -76,7 +76,14 @@ func Help() {
 	fmt.Println("")
 	fmt.Println("run <script> [-v|--debug] - executes a script defined in run.json or referenced config files")
 	fmt.Println("              -v|--debug  - print debug information")
+	fmt.Println("")
 	fmt.Println("run --init                - creates a new config file")
+	fmt.Println("run --init-global         - creates a reference to the current directory in the global config")
+	fmt.Println("")
+	fmt.Println("run --list                - lists all available commands")
+	fmt.Println("")
+	fmt.Println("run --completion          - returns a shell auto completion script")
+	fmt.Println("")
 	fmt.Println("run -h|--help             - prints command usage")
 }
 
