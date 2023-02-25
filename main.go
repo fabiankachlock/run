@@ -29,6 +29,8 @@ func main() {
 	cleanArgs := run.GetCleanArgs(args)
 	if cleanArgs[1] == "--init" {
 		run.Init()
+	} else if cleanArgs[1] == "--init-global" {
+		run.InitGlobal()
 	} else if cleanArgs[1] == "--list" {
 		run.List()
 	} else if cleanArgs[1] == "--help" || cleanArgs[1] == "-h" {

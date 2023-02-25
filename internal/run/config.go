@@ -13,8 +13,8 @@ import (
 
 type Config struct {
 	Scripts  map[string]string      `json:"scripts"`
-	Extends  []string               `json:"extends"`
-	Scopes   map[string]interface{} `json:"scopes"`
+	Extends  []string               `json:"extends,omitempty"`
+	Scopes   map[string]interface{} `json:"scopes,omitempty"`
 	Location string                 `json:"-"`
 }
 
@@ -52,7 +52,19 @@ func readConfigFile(filePath string) (Config, error) {
 }
 
 func readGlobalConfig() (*GlobalConfig, error) {
-	return new(GlobalConfig), nil
+	globalFile := getRunGlobalConfigFilePath()
+	content, err := os.ReadFile(globalFile)
+	if err != nil {
+		return &GlobalConfig{}, err
+	}
+
+	var globalConfig GlobalConfig
+	err = json.Unmarshal(content, &globalConfig)
+	if err != nil {
+		return &GlobalConfig{}, err
+	}
+
+	return &globalConfig, nil
 }
 
 func WalkConfigs(cwd string, handler func(script Script) bool) error {
@@ -61,7 +73,6 @@ func WalkConfigs(cwd string, handler func(script Script) bool) error {
 	globalConfig, err := readGlobalConfig()
 	if err != nil {
 		log.Printf("[error] cant read global config: %s", err)
-		return err
 	}
 
 	dir := cwd
