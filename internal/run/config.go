@@ -191,7 +191,11 @@ func scanConfig(config Config, handler func(script Script) bool) bool {
 		for alias, command := range scripts {
 			// targetScript should match {vendorScope}:{vendorScript} (scoped version of vendor script)
 			script.Command = command
-			script.Key = scope + ":" + alias
+			if scope != "" {
+				script.Key = scope + ":" + alias
+			} else {
+				script.Key = alias
+			}
 			shouldStop := handler(*script)
 			if shouldStop {
 				return shouldStop
