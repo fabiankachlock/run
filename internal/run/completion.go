@@ -18,7 +18,7 @@ complete -F _run_completions run`))
 func GenerateCompletionSuggestions() {
 	cwd, err := os.Getwd()
 	if err == nil {
-		scripts := ListScripts(cwd)
+		scripts := ListScriptNames(cwd)
 		os.Stdout.Write([]byte(strings.Join(scripts, " ")))
 	}
 }

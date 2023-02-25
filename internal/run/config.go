@@ -242,10 +242,19 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 	return scriptToReturn, err
 }
 
-func ListScripts(cwd string) []string {
+func ListScriptNames(cwd string) []string {
 	var allScripts []string = []string{}
 	WalkConfigs(cwd, func(script Script) bool {
 		allScripts = append(allScripts, script.Key)
+		return continueConfigWalk
+	})
+	return allScripts
+}
+
+func ListScriptsRaw(cwd string) []Script {
+	var allScripts []Script = []Script{}
+	WalkConfigs(cwd, func(script Script) bool {
+		allScripts = append(allScripts, script)
 		return continueConfigWalk
 	})
 	return allScripts

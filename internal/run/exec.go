@@ -38,6 +38,22 @@ func Help() {
 	fmt.Println("run -h|--help             - prints command usage")
 }
 
+func List() {
+	cwd, err := os.Getwd()
+	handleError(err, "cant get cwd")
+	fmt.Printf("$run: scripts available at %s\n", cwd)
+	scripts := ListScriptsRaw(cwd)
+	isDebug := HasDebugFlag(os.Args)
+	for _, script := range scripts {
+		if isDebug {
+			fmt.Printf("  %s → %s (in: %s)\n", script.Key, script.Command, script.Wd)
+		} else {
+			fmt.Printf("  %s → %s\n", script.Key, script.Command)
+		}
+	}
+	fmt.Println("$run: done")
+}
+
 func Execute(name string) {
 	log.Printf("[info] searching script '%s'", name)
 	cwd, err := os.Getwd()

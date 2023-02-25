@@ -4,7 +4,6 @@
 
 - Are you tired of write a bunch of shell scripts just to execute a single one-liner?
 - Do you like javascript - package.json approach to manage your scripts and wish to integrate that style of script management into other ecosystems?
-- 
 
 __*`run`*__ is your solution!
 
@@ -99,5 +98,6 @@ Currently only the following are supported:
 - [x] shell auto completion support
 - [ ] provide prebuilt binaries in releases
 - [ ] support `root` option in config
-- [ ] provide `--list` option
+- [x] provide `--list` option
+- [ ] support global config
 - [ ] support more vendors
