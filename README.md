@@ -97,7 +97,7 @@ Currently only the following are supported:
 
 - [x] shell auto completion support
 - [ ] provide prebuilt binaries in releases
-- [ ] support `root` option in config
+- [x] support `root` option in config
 - [x] provide `--list` option
-- [ ] support global config
+- [x] support global config
 - [ ] support more vendors

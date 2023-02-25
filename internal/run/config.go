@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	Root     bool                   `json:"root"`
 	Scripts  map[string]string      `json:"scripts"`
 	Extends  []string               `json:"extends,omitempty"`
 	Scopes   map[string]interface{} `json:"scopes,omitempty"`
@@ -97,7 +98,7 @@ func WalkConfigs(cwd string, handler func(script Script) bool) error {
 
 		// log errors happened while reading the config
 		if err != nil {
-			log.Printf("[error] while searching script in config %s: %s", filePath, err)
+			log.Printf("[error] while reading config %s: %s", filePath, err)
 		}
 
 		// try go up one folder
@@ -120,7 +121,9 @@ func walkConfigRecursive(filePath string, globalConfig *GlobalConfig, alreadyLoa
 	(*alreadyLoaded)[filePath] = true
 
 	// scan local config first
-	if err == nil {
+	if err != nil {
+		log.Printf("[error] [%s] reading local config", config.Location)
+	} else {
 		log.Printf("[info] [%s] scanning local config", config.Location)
 		config = computeConfigScopes(config)
 		shouldStop := scanConfig(config, handler)
@@ -158,7 +161,10 @@ func walkConfigRecursive(filePath string, globalConfig *GlobalConfig, alreadyLoa
 			log.Printf("[info] [%s] [%s] not loading - already loaded", filePath, ref)
 		}
 	}
-	return continueConfigWalk, ErrCantFindScript
+	if config.Root {
+		return stopConfigWalk, nil
+	}
+	return continueConfigWalk, nil
 }
 
 func scanConfig(config Config, handler func(script Script) bool) bool {
@@ -250,7 +256,13 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 		}
 		return continueConfigWalk
 	})
-	return scriptToReturn, err
+	if err != nil {
+		return scriptToReturn, err
+	}
+	if scriptToReturn == nil {
+		return scriptToReturn, ErrCantFindScript
+	}
+	return scriptToReturn, nil
 }
 
 func ListScriptNames(cwd string) []string {

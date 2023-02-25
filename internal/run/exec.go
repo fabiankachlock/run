@@ -93,7 +93,7 @@ func List() {
 			fmt.Printf("  %s → %s\n", script.Key, script.Command)
 		}
 	}
-	fmt.Println("$run: done")
+	fmt.Printf("$run: done - found %d scripts\n", len(scripts))
 }
 
 func Execute(name string) {
