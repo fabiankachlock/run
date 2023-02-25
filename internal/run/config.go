@@ -18,17 +18,24 @@ type Config struct {
 	Location string                 `json:"-"`
 }
 
+type GlobalConfig map[string]Config
+
 type Script struct {
+	Key     string
 	Command string
 	Wd      string
 }
+
+// bool indicates whether the searched script has been found
+// when true the recursive search stops
+type ScriptHandler func(script Script) bool
 
 var AllLoaders map[string]loader.Loader = map[string]loader.Loader{
 	"npm":  npm.NewLoader(),
 	"yarn": yarn.NewLoader(),
 }
 
-func readConfig(filePath string) (Config, error) {
+func readConfigFile(filePath string) (Config, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return Config{}, err
@@ -44,12 +51,21 @@ func readConfig(filePath string) (Config, error) {
 	return config, nil
 }
 
-func FindScript(cwd string, targetScript string) (*Script, error) {
+func readGlobalConfig() (*GlobalConfig, error) {
+	return new(GlobalConfig), nil
+}
+
+func WalkConfigs(cwd string, handler func(script Script) bool) error {
 	var loadedConfigs *map[string]bool = &map[string]bool{}
+
+	globalConfig, err := readGlobalConfig()
+	if err != nil {
+		log.Printf("[error] cant read global config: %s", err)
+		return err
+	}
 
 	dir := cwd
 	for {
-		var script *Script
 		filePath := filepath.Join(dir, CONFIG_FILE)
 		log.Printf("[info] try reading config %s", filePath)
 
@@ -57,16 +73,19 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 		_, err := os.Stat(filePath)
 		// if exists search that config
 		if err == nil {
-			script, err = findScriptInConfig(filePath, targetScript, loadedConfigs)
+			var shouldStop bool
+			shouldStop, err = walkConfigRecursive(filePath, globalConfig, loadedConfigs, handler)
+			if shouldStop {
+				log.Printf("[info] stopping config search")
+				break
+			}
 		} else {
 			log.Printf("[error] while reading config %s: %s", filePath, err)
 			err = nil
 		}
 
-		// if found a scrip
-		if err == nil && script != nil {
-			return script, nil
-		} else if err != nil {
+		// log errors happened while reading the config
+		if err != nil {
 			log.Printf("[error] while searching script in config %s: %s", filePath, err)
 		}
 
@@ -75,59 +94,52 @@ func FindScript(cwd string, targetScript string) (*Script, error) {
 		// dir doesn't change when root
 		if newDir == dir {
 			log.Printf("[info] reached root - stopping search")
-			return nil, ErrCantFindScript
+			return ErrCantFindScript
 		} else {
 			dir = newDir
 		}
 	}
+	return nil
 }
 
-func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map[string]bool) (*Script, error) {
+func walkConfigRecursive(filePath string, globalConfig *GlobalConfig, alreadyLoaded *map[string]bool, handler func(script Script) bool) (bool, error) {
 	log.Printf("[info] reading config %s", filePath)
 	dir := filepath.Dir(filePath)
-	config, err := readConfig(filePath)
-	if err != nil {
-		return nil, err
-	}
+	config, err := readConfigFile(filePath)
 	(*alreadyLoaded)[filePath] = true
 
-	config = computeConfigScopes(config, filePath)
-	script, ok := config.Scripts[targetScript]
-	if ok {
-		return &Script{
-			Command: script,
-			Wd:      config.Location,
-		}, nil
-	} else {
-		log.Printf("[info] [%s] config script don't include target script", filePath)
-	}
-
-	log.Printf("[info] [%s] loading vendor scripts", filePath)
-	// search all vendors
-	for scope, vendor := range getEnabledLoaders(config) {
-		log.Printf("[info] [%s] [%s] loading vendor script", filePath, scope)
-		for alias, script := range vendor.LoadConfig(dir) {
-			// targetScript should match {vendorScope}:{vendorScript} (scoped version of vendor script)
-			if scope+":"+alias == targetScript {
-				return &Script{
-					Command: script,
-					Wd:      config.Location,
-				}, nil
-			}
+	// scan local config first
+	if err == nil {
+		log.Printf("[info] [%s] scanning local config", config.Location)
+		config = computeConfigScopes(config)
+		shouldStop := scanConfig(config, handler)
+		if shouldStop {
+			return shouldStop, nil
 		}
-		log.Printf("[info] [%s] [%s] vendor script don't include target script", filePath, scope)
 	}
 
-	log.Printf("[info] [%s] loading reference scripts", filePath)
+	// try reading global config for this path
+	globalConfigDeceleration, foundGlobalConfig := (*globalConfig)[filePath]
+	if foundGlobalConfig {
+		log.Printf("[info] [%s] scanning global config", config.Location)
+		globalConfigDeceleration.Location = filepath.Dir(filePath)
+		globalConfigDeceleration = computeConfigScopes(globalConfigDeceleration)
+		shouldStop := scanConfig(globalConfigDeceleration, handler)
+		if shouldStop {
+			return shouldStop, nil
+		}
+	}
+
 	// search all reference
+	log.Printf("[info] [%s] loading reference scripts", config.Location)
 	for _, ref := range config.Extends {
 		// only load config if not already loaded (against cyclic refs)
 		referencePath := filepath.Join(dir, ref)
 		if _, ok := (*alreadyLoaded)[referencePath]; !ok {
-			log.Printf("[info] [%s] [%s] loading reference at %s", filePath, ref, referencePath)
-			foundScript, err := findScriptInConfig(referencePath, targetScript, alreadyLoaded)
-			if foundScript != nil && err == nil {
-				return foundScript, nil
+			log.Printf("[info] [%s] [%s] loading reference at %s", config.Location, ref, referencePath)
+			shouldStop, err := walkConfigRecursive(referencePath, globalConfig, alreadyLoaded, handler)
+			if shouldStop {
+				return shouldStop, nil
 			} else if err != nil {
 				log.Printf("[error] [%s] [%s] while loading reference: %s", filePath, ref, err)
 			}
@@ -135,12 +147,41 @@ func findScriptInConfig(filePath string, targetScript string, alreadyLoaded *map
 			log.Printf("[info] [%s] [%s] not loading - already loaded", filePath, ref)
 		}
 	}
-
-	return nil, ErrCantFindScript
+	return continueConfigWalk, ErrCantFindScript
 }
 
-func computeConfigScopes(config Config, filePath string) Config {
-	log.Printf("[info] [%s] computing scopes", filePath)
+func scanConfig(config Config, handler func(script Script) bool) bool {
+	var script = &Script{Wd: config.Location}
+
+	for key, command := range config.Scripts {
+		script.Command = command
+		script.Key = key
+		shouldStop := handler(*script)
+		if shouldStop {
+			return shouldStop
+		}
+	}
+
+	log.Printf("[info] [%s] loading vendor scripts", config.Location)
+	dir := filepath.Dir(config.Location)
+	// search all vendors
+	for scope, vendor := range getEnabledLoaders(config) {
+		log.Printf("[info] [%s] [%s] loading vendor script", config.Location, scope)
+		for alias, command := range vendor.LoadConfig(dir) {
+			// targetScript should match {vendorScope}:{vendorScript} (scoped version of vendor script)
+			script.Command = command
+			script.Key = scope + ":" + alias
+			shouldStop := handler(*script)
+			if shouldStop {
+				return shouldStop
+			}
+		}
+	}
+	return false
+}
+
+func computeConfigScopes(config Config) Config {
+	log.Printf("[info] [%s] computing scopes", config.Location)
 
 	if scope, ok := config.Scopes[SELF_SCOPE]; ok {
 		var alias string
@@ -156,7 +197,7 @@ func computeConfigScopes(config Config, filePath string) Config {
 		default:
 			return config
 		}
-		log.Printf("[info] [%s] rescoped self as '%s'", filePath, alias)
+		log.Printf("[info] [%s] rescoped self as '%s'", config.Location, alias)
 		for key, script := range config.Scripts {
 			delete(config.Scripts, key)
 			config.Scripts[alias+":"+key] = script
@@ -185,66 +226,23 @@ func getEnabledLoaders(config Config) map[string]loader.Loader {
 	return loaders
 }
 
-func ListScripts(cwd string) []string {
-	var loadedConfigs *map[string]bool = &map[string]bool{}
-	var allScripts []string = []string{}
-
-	dir := cwd
-	for {
-		filePath := filepath.Join(dir, CONFIG_FILE)
-		log.Printf("[info] try reading config %s", filePath)
-
-		// check if config file exists in folder
-		_, err := os.Stat(filePath)
-		// if exists search that config
-		if err == nil {
-			allScripts = append(allScripts, listScriptsOfConfig(filePath, loadedConfigs)...)
-		} else {
-			log.Printf("[error] while reading config %s: %s", filePath, err)
-			err = nil
+func FindScript(cwd string, targetScript string) (*Script, error) {
+	var scriptToReturn *Script
+	err := WalkConfigs(cwd, func(script Script) bool {
+		if script.Key == targetScript {
+			scriptToReturn = &script
+			return stopConfigWalk
 		}
-
-		// try go up one folder
-		newDir := filepath.Dir(dir)
-		// dir doesn't change when root
-		if newDir == dir {
-			log.Printf("[info] reached root - stopping search")
-			return allScripts
-		} else {
-			dir = newDir
-		}
-	}
+		return continueConfigWalk
+	})
+	return scriptToReturn, err
 }
 
-func listScriptsOfConfig(filePath string, alreadyLoaded *map[string]bool) []string {
-	log.Printf("[info] reading config %s", filePath)
-	dir := filepath.Dir(filePath)
-	config, err := readConfig(filePath)
-	if err != nil {
-		return []string{}
-	}
-	(*alreadyLoaded)[filePath] = true
-
-	scriptsOfConfig := []string{}
-	config = computeConfigScopes(config, filePath)
-	for script := range config.Scripts {
-		scriptsOfConfig = append(scriptsOfConfig, script)
-	}
-
-	for scope, vendor := range getEnabledLoaders(config) {
-		log.Printf("[info] [%s] [%s] loading vendor script", filePath, scope)
-		for alias := range vendor.LoadConfig(dir) {
-			scriptsOfConfig = append(scriptsOfConfig, scope+":"+alias)
-		}
-	}
-
-	for _, ref := range config.Extends {
-		referencePath := filepath.Join(dir, ref)
-		if _, ok := (*alreadyLoaded)[referencePath]; !ok {
-			log.Printf("[info] [%s] [%s] loading reference at %s", filePath, ref, referencePath)
-			scriptsOfConfig = append(scriptsOfConfig, listScriptsOfConfig(referencePath, alreadyLoaded)...)
-		}
-	}
-
-	return scriptsOfConfig
+func ListScripts(cwd string) []string {
+	var allScripts []string = []string{}
+	WalkConfigs(cwd, func(script Script) bool {
+		allScripts = append(allScripts, script.Key)
+		return continueConfigWalk
+	})
+	return allScripts
 }
