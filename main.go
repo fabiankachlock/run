@@ -39,6 +39,3 @@ func main() {
 		run.Execute(cleanArgs[1])
 	}
 }
-
-// TODO
-// - allow vendors to return errors for better debugging

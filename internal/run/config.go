@@ -163,11 +163,15 @@ func scanConfig(config Config, handler func(script Script) bool) bool {
 	}
 
 	log.Printf("[info] [%s] loading vendor scripts", config.Location)
-	dir := filepath.Dir(config.Location)
 	// search all vendors
 	for scope, vendor := range getEnabledLoaders(config) {
 		log.Printf("[info] [%s] [%s] loading vendor script", config.Location, scope)
-		for alias, command := range vendor.LoadConfig(dir) {
+		scripts, err := vendor.LoadConfig(config.Location)
+		if err != nil {
+			log.Printf("[error] [%s] [%s] cant load vendor: %s", config.Location, scope, err)
+			continue
+		}
+		for alias, command := range scripts {
 			// targetScript should match {vendorScope}:{vendorScript} (scoped version of vendor script)
 			script.Command = command
 			script.Key = scope + ":" + alias
