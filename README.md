@@ -1,12 +1,11 @@
-# run
+# run 🚀
 
 > *THE* universal & ecosystem independent lightweight script management tool!
 
 - Are you tired of write a bunch of shell scripts just to execute a single one-liner?
 - Do you like javascript - package.json approach to manage your scripts and wish to integrate that style of script management into other ecosystems?
-- 
 
-__*`run`*__ is your solution!
+__*`run`*__ is your solution! (It even autocompletes✨)
 
 ## Installation
 
