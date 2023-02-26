@@ -18,21 +18,21 @@ func NewLoader() loader.Loader {
 	return &npmLoader{}
 }
 
-func (n *npmLoader) LoadConfig(dir string) map[string]string {
+func (n *npmLoader) LoadConfig(dir string) (map[string]string, error) {
 	file, err := os.ReadFile(filepath.Join(dir, "package.json"))
 	if err != nil {
-		return map[string]string{}
+		return map[string]string{}, err
 	}
 
 	var parsedPackageJson packageJson
 	err = json.Unmarshal(file, &parsedPackageJson)
 	if err != nil {
-		return map[string]string{}
+		return map[string]string{}, err
 	}
 
 	remappedScripts := map[string]string{}
 	for alias := range parsedPackageJson.Scripts {
 		remappedScripts[alias] = "npm run " + alias
 	}
-	return remappedScripts
+	return remappedScripts, nil
 }

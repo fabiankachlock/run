@@ -1,5 +1,5 @@
 package loader
 
 type Loader interface {
-	LoadConfig(dir string) map[string]string
+	LoadConfig(dir string) (map[string]string, error)
 }

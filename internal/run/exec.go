@@ -2,6 +2,7 @@ package run
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -13,11 +14,27 @@ import (
 //go:embed template/*
 var templates embed.FS
 
+func getRunGlobalConfigFilePath() string {
+	runHome := os.Getenv(RUN_HOME_VAR)
+	pathOfGlobalConfig := os.Getenv(HOME_VAR)
+	if runHome != "" {
+		pathOfGlobalConfig = runHome
+	}
+	return filepath.Join(pathOfGlobalConfig, GLOBAL_CONFIG_FILE)
+}
+
 func Init() {
 	cwd, err := os.Getwd()
 	handleError(err, "cant get cwd")
 
 	path := filepath.Join(cwd, CONFIG_FILE)
+
+	_, err = os.Stat(path)
+	if err == nil {
+		fmt.Printf("$run: done - file already exists at %s\n", path)
+		return
+	}
+
 	file, err := os.Create(path)
 	handleError(err, "cant create config file")
 
@@ -26,6 +43,31 @@ func Init() {
 
 	_, err = file.Write(content)
 	handleError(err, "cant write to config file")
+	fmt.Printf("$run: done - create config file %s\n", path)
+}
+
+func InitGlobal() {
+	cwd, err := os.Getwd()
+	currentPath := filepath.Join(cwd, CONFIG_FILE)
+	globalPath := getRunGlobalConfigFilePath()
+	handleError(err, "cant get cwd")
+
+	globalConfig, _ := readGlobalConfig()
+	if _, ok := (*globalConfig)[currentPath]; !ok {
+		(*globalConfig)[currentPath] = Config{
+			Scripts: map[string]string{},
+		}
+	} else {
+		fmt.Printf("$run: done - config ref already exists for file %s\n", currentPath)
+		return
+	}
+
+	content, err := json.MarshalIndent(*globalConfig, "", "  ")
+	handleError(err, "cant marshal json")
+
+	err = os.WriteFile(globalPath, content, 0644)
+	handleError(err, "cant write to config file")
+	fmt.Printf("$run: done - created global config ref for file %s\n", currentPath)
 }
 
 func Help() {
@@ -34,8 +76,31 @@ func Help() {
 	fmt.Println("")
 	fmt.Println("run <script> [-v|--debug] - executes a script defined in run.json or referenced config files")
 	fmt.Println("              -v|--debug  - print debug information")
+	fmt.Println("")
 	fmt.Println("run --init                - creates a new config file")
+	fmt.Println("run --init-global         - creates a reference to the current directory in the global config")
+	fmt.Println("")
+	fmt.Println("run --list                - lists all available commands")
+	fmt.Println("")
+	fmt.Println("run --completion          - returns a shell auto completion script")
+	fmt.Println("")
 	fmt.Println("run -h|--help             - prints command usage")
+}
+
+func List() {
+	cwd, err := os.Getwd()
+	handleError(err, "cant get cwd")
+	fmt.Printf("$run: scripts available at %s\n", cwd)
+	scripts := ListScriptsRaw(cwd)
+	isDebug := HasDebugFlag(os.Args)
+	for _, script := range scripts {
+		if isDebug {
+			fmt.Printf("  %s → %s (in: %s)\n", script.Key, script.Command, script.Wd)
+		} else {
+			fmt.Printf("  %s → %s\n", script.Key, script.Command)
+		}
+	}
+	fmt.Printf("$run: done - found %d scripts\n", len(scripts))
 }
 
 func Execute(name string) {

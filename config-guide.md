@@ -58,3 +58,19 @@ Supported loaders:
 - yarn
 
 Loaders need to be enabled explicitly by setting `"<loader alias>": true` or can be renamed by setting `"<loader alias>: "<new alias>`
+
+When the new alias is an empty string, loader script will be available without an alias
+
+## `root`
+
+run by default searches for config files upwards the file system until it's a root. This is used for easier configuration in large  projects where you have multiple sub projects with their own config file and allows you to only reference sub project config files once from the root config file.
+
+To stop run from searching outside you project you can create a `run.json` file with
+
+```json
+{
+    "root": true
+}
+```
+
+to indicate that run should search outside this directory
