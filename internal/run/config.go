@@ -37,15 +37,16 @@ var AllLoaders map[string]loader.Loader = map[string]loader.Loader{
 }
 
 func readConfigFile(filePath string) (Config, error) {
+	location := filepath.Dir(filePath)
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return Config{}, err
+		return Config{Location: location}, err
 	}
 
 	var config Config
 	err = json.Unmarshal(content, &config)
 	if err != nil {
-		return Config{}, err
+		return Config{Location: location}, err
 	}
 
 	config.Location = filepath.Dir(filePath)
@@ -81,19 +82,11 @@ func WalkConfigs(cwd string, handler func(script Script) bool) error {
 		filePath := filepath.Join(dir, CONFIG_FILE)
 		log.Printf("[info] try reading config %s", filePath)
 
-		// check if config file exists in folder
-		_, err := os.Stat(filePath)
-		// if exists search that config
-		if err == nil {
-			var shouldStop bool
-			shouldStop, err = walkConfigRecursive(filePath, globalConfig, loadedConfigs, handler)
-			if shouldStop {
-				log.Printf("[info] stopping config search")
-				break
-			}
-		} else {
-			log.Printf("[error] while reading config %s: %s", filePath, err)
-			err = nil
+		var shouldStop bool
+		shouldStop, err = walkConfigRecursive(filePath, globalConfig, loadedConfigs, handler)
+		if shouldStop {
+			log.Printf("[info] stopping config search")
+			break
 		}
 
 		// log errors happened while reading the config
@@ -116,13 +109,14 @@ func WalkConfigs(cwd string, handler func(script Script) bool) error {
 
 func walkConfigRecursive(filePath string, globalConfig *GlobalConfig, alreadyLoaded *map[string]bool, handler func(script Script) bool) (bool, error) {
 	log.Printf("[info] reading config %s", filePath)
-	dir := filepath.Dir(filePath)
 	config, err := readConfigFile(filePath)
+
 	(*alreadyLoaded)[filePath] = true
+	allExtension := config.Extends
 
 	// scan local config first
 	if err != nil {
-		log.Printf("[error] [%s] reading local config", config.Location)
+		log.Printf("[error] [%s] reading local config: %s", config.Location, err)
 	} else {
 		log.Printf("[info] [%s] scanning local config", config.Location)
 		config = computeConfigScopes(config)
@@ -135,8 +129,14 @@ func walkConfigRecursive(filePath string, globalConfig *GlobalConfig, alreadyLoa
 	// try reading global config for this path
 	globalConfigDeceleration, foundGlobalConfig := (*globalConfig)[filePath]
 	if foundGlobalConfig {
-		log.Printf("[info] [%s] scanning global config", config.Location)
 		globalConfigDeceleration.Location = filepath.Dir(filePath)
+		allExtension = append(allExtension, globalConfigDeceleration.Extends...)
+		if globalConfigDeceleration.Root {
+			config.Root = true
+		}
+
+		log.Printf("[info] [%s] scanning global config", globalConfigDeceleration.Location)
+
 		globalConfigDeceleration = computeConfigScopes(globalConfigDeceleration)
 		shouldStop := scanConfig(globalConfigDeceleration, handler)
 		if shouldStop {
@@ -145,13 +145,12 @@ func walkConfigRecursive(filePath string, globalConfig *GlobalConfig, alreadyLoa
 	}
 
 	// search all reference
-	log.Printf("[info] [%s] loading reference scripts", config.Location)
-	for _, ref := range config.Extends {
+	log.Printf("[info] [%s] loading reference scripts (%d)", config.Location, len(allExtension))
+	for _, ref := range allExtension {
 		// only load config if not already loaded (against cyclic refs)
-		referencePath := filepath.Join(dir, ref)
-		if _, ok := (*alreadyLoaded)[referencePath]; !ok {
-			log.Printf("[info] [%s] [%s] loading reference at %s", config.Location, ref, referencePath)
-			shouldStop, err := walkConfigRecursive(referencePath, globalConfig, alreadyLoaded, handler)
+		if _, ok := (*alreadyLoaded)[ref]; !ok {
+			log.Printf("[info] [%s] [%s] loading reference at %s", config.Location, ref, ref)
+			shouldStop, err := walkConfigRecursive(ref, globalConfig, alreadyLoaded, handler)
 			if shouldStop {
 				return shouldStop, nil
 			} else if err != nil {
