@@ -67,6 +67,8 @@ To setup auto completion in your shell, you need to put the following line into 
 source <(run --completion)
 ```
 
+You might need to add `COMP_WORDBREAKS=${COMP_WORDBREAKS//:}` too, so that your shell does not interpret colons as word breaks (be careful, this migth break other auto completion scripts)
+
 ### writing scripts
 
 TODO
